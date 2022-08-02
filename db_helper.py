@@ -61,7 +61,7 @@ class PostgreDBHelper:
             self.cursor = self.conn.cursor()
             self.cursor.execute(stmt, args)
             self.conn.commit()
-        except sqlite3.IntegrityError:
+        except psycopg2.errors.UniqueViolation:
             raise ValueError
 
     def delete_target(self, url, chat_id):
