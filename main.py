@@ -68,6 +68,8 @@ def main(logger, db):
                         f'Hit target price {target_price} for url {target_url}')
                     send_to_chat(price, target_url, target_chat)
                     logger.debug(f'Sent message to {target_chat}')
+            logger.info(f"Done fetching targets")
+            logger.info(f"Next fetch in ${SLEEP_INTERVAL} seconds")
             time.sleep(SLEEP_INTERVAL)
         except Exception as e:
             logger.error(e)
@@ -165,6 +167,8 @@ def get_price_for_update_handler(message):
     try:
         url = state[message.chat.id]["url"]
         price = float(message.text)
+        logger.info(
+            f"Updating target {url} - price {price} from chat_id {message.chat.id}")
         db.update_target_price(url, price, message.chat.id)
         bot.reply_to(
             message, f"Updated target with URL {url} and price {price}")
@@ -191,6 +195,7 @@ def get_url_for_delete_handler(message):
     if not url:
         bot.reply_to(message, f"URL must be a proper Instant Gaming URL.")
         return
+    logger.info(f"Deleting target {url} from chat_id {message.chat.id}")
     db.delete_target(url, message.chat.id)
     bot.reply_to(message, f"Target {url} deleted!")
 
@@ -221,6 +226,7 @@ def search_targets(message):
 
 def search_keyword_handler(message):
     keyword = message.text
+    logger.info(f"Searching keyword {keyword} from chat_id {message.chat.id}")
     results = search_keyword(keyword)[:3]
     for url in results:
         current_price = get_price_from_url(url)
