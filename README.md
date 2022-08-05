@@ -14,6 +14,7 @@ The following environment variables are needed to start the bot:
 ```
     /start - Start the bot.
     /help - Help message.
+    /search - Search for URLs to track by keyword
     /add - Add a new target url to track with a price.
     /update - Update an existing target url to track with a different price.
     /delete - Delete a tracked target.

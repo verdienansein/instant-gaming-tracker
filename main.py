@@ -28,6 +28,16 @@ def get_price_from_url(url):
     price = soup.find_all("meta", itemprop="price")
     return float(price[0]["data-price-eur"])
 
+def search_keyword(keyword):
+    html_text = requests.get(f"https://www.instant-gaming.com/en/search/?q={keyword}").text
+    soup = BeautifulSoup(html_text, "html.parser")
+    links = soup.find_all("a", href=True)
+    results = []
+    for link in links:
+      if bool(re.search("https:\/\/www\.instant-gaming\.com/en/\d+-", link["href"])):
+        results.append(link["href"])
+    return results
+
 def send_to_chat(price, url, chat_id):
     data = {
         'chat_id': chat_id,
@@ -75,8 +85,9 @@ def add_target(message):
     bot.reply_to(message, f"""
     /start - Start the bot.
 /help - Help message.
-/add - Add a new target url to track with a price.
-/update - Update an existing target url to track with a different price.
+/search - Search for URLs to track by keyword
+/add - Add a new target URL to track with a price.
+/update - Update an existing target URL to track with a different price.
 /delete - Delete a tracked target.
 /list - List all the tracked targets.
     """)
@@ -169,6 +180,17 @@ def list_targets(message):
     for target in targets:
         reply = f'Url: {target[0]}, Target price: {target[1]}'
         bot.reply_to(message, reply)
+
+@bot.message_handler(commands=["search"])
+def search_targets(message):
+    bot.reply_to(message, "Insert a keyword to search: ")
+    bot.register_next_step_handler(message=message, callback=search_keyword_handler)
+
+def search_keyword_handler(message):
+    keyword = message.text
+    results = search_keyword(keyword)[:3]
+    for result in results:
+        bot.reply_to(message, result)
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(process)d-%(levelname)s-%(message)s', stream = sys.stdout, level = LOG_LEVEL)
