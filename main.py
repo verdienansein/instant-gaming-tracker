@@ -1,43 +1,53 @@
 import os
 import requests
 import time
+import sys
+import logging
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 
 TOKEN = os.getenv('TOKEN')
 CHAT_IDS = os.getenv('CHAT_IDS').split(",")
+LOG_LEVEL = os.getenv('LOG_LEVEL')
+SLEEP_INTERVAL = int(os.getenv('SLEEP_INTERVAL'))
 TELEGRAM_API_URL = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
 
-TARGETS = [{
-    'url': 'https://www.instant-gaming.com/en/8144-buy-steam-total-war-warhammer-iii-pc-game-steam-europe/',
-    'price_target': 20
-},
-{
-    'url': 'https://www.instant-gaming.com/en/2157-buy-steam-game-steam-factorio/',
-    'price_target': 20
-}]
-
-def get_price_from_url( url ):
+def get_price_from_url(url):
     html_text = requests.get(url).text
     soup = BeautifulSoup(html_text, "html.parser")
     return float(soup.find_all("div", class_="total")[-1].get_text()[:-1])
 
-def send_to_chat( price, url, chat_id ):
+def send_to_chat(price, url, chat_id):
     data = {
         'chat_id': chat_id,
         'text': f'Price for {url} is now {price}!',
         'parse_mode': 'Markdown'
     }
-    r = requests.post(TELEGRAM_API_URL, data=data)
+    requests.post(TELEGRAM_API_URL, data=data)
 
-def main():
+def create_targets_list():
+    targets = []
+    for key, value in os.environ.items():
+      if key.startswith('TARGET_'):
+        target = { 'url': value.split(',')[0], 'price_target': float(value.split(',')[1])}
+        targets.append(target)
+    return targets
+
+def main(logger):
+    targets = create_targets_list()
+    logger.info(f'Target list loaded: {targets}')
     while True:
-        for target in TARGETS:
+        for target in targets:
             price = get_price_from_url(target['url'])
+            logger.debug(f'Price {price} for url {target["url"]}')
             if price <= target['price_target']:
+                logger.info(f'Hit price target for url {target["url"]}')
                 for chat_id in CHAT_IDS:
                     send_to_chat(price, target['url'], chat_id)
-            time.sleep(120)
+                    logger.debug(f'Sent message to {chat_id}')
+        time.sleep(SLEEP_INTERVAL)
 
 if __name__ == '__main__':
-    main()
+    logging.basicConfig(format='%(process)d-%(levelname)s-%(message)s', stream = sys.stdout, level = LOG_LEVEL)
+    logger = logging.getLogger()
+    main(logger)
