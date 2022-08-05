@@ -15,7 +15,7 @@ TOKEN = os.getenv('TOKEN')
 LOG_LEVEL = os.getenv('LOG_LEVEL')
 SLEEP_INTERVAL = int(os.getenv('SLEEP_INTERVAL'))
 DB_TYPE = os.getenv('DB_TYPE')
-HEROKU_POSTGRESQL = os.getenv('HEROKU_POSTGRESQL')
+DATABASE_URL = os.getenv('DATABASE_URL')
 TELEGRAM_API_URL = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
 
 bot = telebot.TeleBot(TOKEN)
@@ -127,7 +127,7 @@ if __name__ == '__main__':
     if DB_TYPE == 'sqlite':
         db = DBHelper()
     elif DB_TYPE == 'postgresql':
-        db = PostgreDBHelper(conn_string=HEROKU_POSTGRESQL)
+        db = PostgreDBHelper(conn_string=DATABASE_URL)
 
     db.setup()
 
