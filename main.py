@@ -69,7 +69,7 @@ def main(logger, db):
                     send_to_chat(price, target_url, target_chat)
                     logger.debug(f'Sent message to {target_chat}')
             logger.info(f"Done fetching targets")
-            logger.info(f"Next fetch in ${SLEEP_INTERVAL} seconds")
+            logger.info(f"Next fetch in {SLEEP_INTERVAL} seconds")
             time.sleep(SLEEP_INTERVAL)
         except Exception as e:
             logger.error(e)
