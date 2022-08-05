@@ -1,16 +1,25 @@
 import os
 import requests
 import time
+import re
 import sys
 import logging
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 
+import telebot
+from threading import Thread
+from db_helper import DBHelper, PostgreDBHelper
+
 TOKEN = os.getenv('TOKEN')
-CHAT_IDS = os.getenv('CHAT_IDS').split(",")
 LOG_LEVEL = os.getenv('LOG_LEVEL')
 SLEEP_INTERVAL = int(os.getenv('SLEEP_INTERVAL'))
+DB_TYPE = os.getenv('DB_TYPE')
+DATABASE_URL = os.getenv('DATABASE_URL')
 TELEGRAM_API_URL = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
+
+bot = telebot.TeleBot(TOKEN)
+
 
 def get_price_from_url(url):
     html_text = requests.get(url).text
@@ -34,21 +43,95 @@ def create_targets_list():
         targets.append(target)
     return targets
 
-def main(logger):
-    targets = create_targets_list()
-    logger.info(f'Target list loaded: {targets}')
+def main(logger, db):
     while True:
+        targets = db.get_all_targets()
+        logger.debug(f'Target list loaded: {targets}')
         for target in targets:
-            price = get_price_from_url(target['url'])
-            logger.debug(f'Price {price} for url {target["url"]}')
-            if price <= target['price_target']:
-                logger.info(f'Hit price target for url {target["url"]}')
-                for chat_id in CHAT_IDS:
-                    send_to_chat(price, target['url'], chat_id)
-                    logger.debug(f'Sent message to {chat_id}')
+            target_url = target[0]
+            target_price = target[1]
+            target_chat = target[2]
+            price = get_price_from_url(target_url)
+            logger.debug(f'Price {price} for url {target_url}')
+            if price <= target_price:
+                logger.info(f'Hit price target for url {target_url}')
+                send_to_chat(price, target_url, target_chat)
+                logger.debug(f'Sent message to {target_chat}')
         time.sleep(SLEEP_INTERVAL)
+
+def parse_message(message):
+    regex = r"(https:\/\/www\.instant-gaming\.com/.+),(\d+)"
+    url = re.findall(regex, message) 
+    if len(url) == 0:
+        return False
+    return url[0]
+
+def parse_url(message):
+    regex = r"(https:\/\/www\.instant-gaming\.com/.+)"
+    url = re.findall(regex, message)  
+    return url[0]
+
+@bot.message_handler(commands=["help", "start"])
+def add_target(message):
+    bot.reply_to(message, f"""
+    /start - Start the bot.
+/help - Help message.
+/add {{URL}},{{TARGET_PRICE}} - Add a new target url to track with a price.
+/update {{URL}},{{TARGET_PRICE}} - Update an existing target url to track with a different price.
+/delete {{URL}} - Delete a tracked target.
+/list - List all the tracked targets.
+    """)
+
+@bot.message_handler(commands=["add"])
+def add_target(message):
+    try:
+        if not parse_message(message.text): 
+            bot.reply_to(message, f"URL must be a proper Instant Gaming URL. Message format must be: {{URL}},{{TARGET_PRICE}}")
+            return
+        url = parse_message(message.text)[0]
+        price = parse_message(message.text)[1]
+        db.add_target(url, float(price), message.chat.id)
+        bot.reply_to(message, f"Added target with URL {url} and price {price}")
+    except ValueError:
+        bot.reply_to(message, f"Target {url} already exists.")
+
+
+
+@bot.message_handler(commands=["update"])
+def update_target(message):
+    if not parse_message(message.text): 
+        bot.reply_to(message, f"URL must be a proper Instant Gaming URL. Message format must be: {{URL}},{{TARGET_PRICE}}")
+        return
+    url = parse_message(message.text)[0]
+    price = parse_message(message.text)[1]
+    db.update_target_price(url, float(price), message.chat.id)
+    bot.reply_to(message, f"Updated target with URL {url} and price {price}")
+
+@bot.message_handler(commands=["delete"])
+def delete_target(message):
+    url = parse_url(message.text)
+    db.delete_target(url, message.chat.id)
+    bot.reply_to(message, f"Target {url} deleted!")
+
+@bot.message_handler(commands=["list"])
+def list_targets(message):
+    targets = db.get_targets(message.chat.id)
+    for target in targets:
+        reply = f'Url: {target[0]}, Target price: {target[1]}'
+        bot.reply_to(message, reply)
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(process)d-%(levelname)s-%(message)s', stream = sys.stdout, level = LOG_LEVEL)
     logger = logging.getLogger()
-    main(logger)
+
+    if DB_TYPE == 'sqlite':
+        db = DBHelper()
+    elif DB_TYPE == 'postgresql':
+        db = PostgreDBHelper(conn_string=DATABASE_URL)
+
+    db.setup()
+
+    thread = Thread(target = main, args = (logger, db))
+    thread.start()
+
+    bot.infinity_polling()
