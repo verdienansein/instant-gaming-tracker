@@ -45,19 +45,22 @@ def create_targets_list():
 
 def main(logger, db):
     while True:
-        targets = db.get_all_targets()
-        logger.debug(f'Target list loaded: {targets}')
-        for target in targets:
-            target_url = target[0]
-            target_price = target[1]
-            target_chat = target[2]
-            price = get_price_from_url(target_url)
-            logger.debug(f'Price {price} for url {target_url}')
-            if price <= target_price:
-                logger.info(f'Hit price target for url {target_url}')
-                send_to_chat(price, target_url, target_chat)
-                logger.debug(f'Sent message to {target_chat}')
-        time.sleep(SLEEP_INTERVAL)
+        try:
+            targets = db.get_all_targets()
+            logger.debug(f'Target list loaded: {targets}')
+            for target in targets:
+                target_url = target[0]
+                target_price = target[1]
+                target_chat = target[2]
+                price = get_price_from_url(target_url)
+                logger.debug(f'Price {price} for url {target_url}')
+                if price <= target_price:
+                    logger.info(f'Hit price target for url {target_url}')
+                    send_to_chat(price, target_url, target_chat)
+                    logger.debug(f'Sent message to {target_chat}')
+            time.sleep(SLEEP_INTERVAL)
+        except:
+          logger.error("Something went wrong")
 
 def parse_message(message):
     regex = r"(https:\/\/www\.instant-gaming\.com/.+),(\d+)"
