@@ -59,8 +59,8 @@ def main(logger, db):
                     send_to_chat(price, target_url, target_chat)
                     logger.debug(f'Sent message to {target_chat}')
             time.sleep(SLEEP_INTERVAL)
-        except:
-          logger.error("Something went wrong")
+        except Exception as e:
+          logger.error(e)
 
 def parse_message(message):
     regex = r"(https:\/\/www\.instant-gaming\.com/.+),(\d+)"
