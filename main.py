@@ -182,11 +182,11 @@ def list_targets(message):
         target_price = target[1]
         current_price = get_price_from_url(url)
         reply = f"""
-*URL*: {url}
-*Target price*: {target_price}
-*Current price*: {current_price}
+🎮 *URL*: {url}
+💶 *Current price*: {current_price}
+💡 *Target price*: {target_price}
         """
-        bot.reply_to(message, reply, parse_mode=telebot.ParseMode.MARKDOWN)
+        bot.reply_to(message, reply, parse_mode="Markdown")
 
 @bot.message_handler(commands=["search"])
 def search_targets(message):
