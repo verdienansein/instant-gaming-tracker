@@ -9,8 +9,12 @@ CHAT_IDS = os.getenv('CHAT_IDS').split(",")
 TELEGRAM_API_URL = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
 
 TARGETS = [{
-    'url': "https://www.instant-gaming.com/en/8144-buy-steam-total-war-warhammer-iii-pc-game-steam-europe/",
-    'price_target': 29
+    'url': 'https://www.instant-gaming.com/en/8144-buy-steam-total-war-warhammer-iii-pc-game-steam-europe/',
+    'price_target': 20
+},
+{
+    'url': 'https://www.instant-gaming.com/en/2157-buy-steam-game-steam-factorio/',
+    'price_target': 20
 }]
 
 def get_price_from_url( url ):
