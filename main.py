@@ -4,6 +4,7 @@ import time
 import re
 import sys
 import logging
+import sqlite3
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 
@@ -16,7 +17,7 @@ LOG_LEVEL = os.getenv('LOG_LEVEL')
 SLEEP_INTERVAL = int(os.getenv('SLEEP_INTERVAL'))
 TELEGRAM_API_URL = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
 
-bot = telebot.TeleBot(TOKEN, parse_mode="Markdown")
+bot = telebot.TeleBot(TOKEN)
 
 
 def get_price_from_url(url):
@@ -57,22 +58,59 @@ def main(logger, db):
                 logger.debug(f'Sent message to {target_chat}')
         time.sleep(SLEEP_INTERVAL)
 
-def get_url(message):
-    regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
-    url = re.findall(regex, message)      
-    return [x[0] for x in url]
+def parse_message(message):
+    regex = r"(https:\/\/www\.instant-gaming\.com/.+),(\d+)"
+    url = re.findall(regex, message) 
+    if len(url) == 0:
+        return False
+    return url[0]
 
-def get_price(message):
-    regex = r",\s*(\d+)"
-    price = re.findall(regex, message)      
-    return price[0]
+def parse_url(message):
+    regex = r"(https:\/\/www\.instant-gaming\.com/.+)"
+    url = re.findall(regex, message)  
+    return url[0]
+
+@bot.message_handler(commands=["help", "start"])
+def add_target(message):
+    bot.reply_to(message, f"""
+    /start - Start the bot.
+/help - Help message.
+/add {{URL}},{{TARGET_PRICE}} - Add a new target url to track with a price.
+/update {{URL}},{{TARGET_PRICE}} - Update an existing target url to track with a different price.
+/delete {{URL}} - Delete a tracked target.
+/list - List all the tracked targets.
+    """)
 
 @bot.message_handler(commands=["add"])
 def add_target(message):
-    url = get_url(message.text)[0]
-    price = get_price(message.text)
-    db.add_target(url, float(price), message.chat.id)
-    bot.reply_to(message, f"Added target with URL {url} and price {price}")
+    try:
+        if not parse_message(message.text): 
+            bot.reply_to(message, f"URL must be a proper Instant Gaming URL. Message format must be: {{URL}},{{TARGET_PRICE}}")
+            return
+        url = parse_message(message.text)[0]
+        price = parse_message(message.text)[1]
+        db.add_target(url, float(price), message.chat.id)
+        bot.reply_to(message, f"Added target with URL {url} and price {price}")
+    except sqlite3.IntegrityError:
+        bot.reply_to(message, f"Target {url} already exists.")
+
+
+
+@bot.message_handler(commands=["update"])
+def update_target(message):
+    if not parse_message(message.text): 
+        bot.reply_to(message, f"URL must be a proper Instant Gaming URL. Message format must be: {{URL}},{{TARGET_PRICE}}")
+        return
+    url = parse_message(message.text)[0]
+    price = parse_message(message.text)[1]
+    db.update_target_price(url, float(price), message.chat.id)
+    bot.reply_to(message, f"Updated target with URL {url} and price {price}")
+
+@bot.message_handler(commands=["delete"])
+def delete_target(message):
+    url = parse_url(message.text)
+    db.delete_target(url, message.chat.id)
+    bot.reply_to(message, f"Target {url} deleted!")
 
 @bot.message_handler(commands=["list"])
 def list_targets(message):

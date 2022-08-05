@@ -6,7 +6,7 @@ class DBHelper:
         self.conn = sqlite3.connect(dbname, check_same_thread=False)
 
     def setup(self):
-        stmt = "CREATE TABLE IF NOT EXISTS targets (url, target_price, chat_id)"
+        stmt = "CREATE TABLE IF NOT EXISTS targets (url, target_price, chat_id, PRIMARY KEY(url, chat_id))"
         self.conn.execute(stmt)
         self.conn.commit()
 
@@ -19,6 +19,12 @@ class DBHelper:
     def delete_target(self, url, chat_id):
         stmt = "DELETE FROM targets WHERE url = (?) AND chat_id = (?)"
         args = (url, chat_id, )
+        self.conn.execute(stmt, args)
+        self.conn.commit()
+
+    def update_target_price(self, url, target_price, chat_id):
+        stmt = "UPDATE targets set target_price = (?) WHERE url = (?) AND chat_id = (?)"
+        args = (target_price, url, chat_id, )
         self.conn.execute(stmt, args)
         self.conn.commit()
 
