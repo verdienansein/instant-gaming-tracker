@@ -36,7 +36,7 @@ def search_keyword(keyword):
     links = soup.find_all("a", href=True)
     results = []
     for link in links:
-        if bool(re.search("https:\/\/www\.instant-gaming\.com/en/\d+-", link["href"])):
+        if bool(re.search("([^\=]|^)https:\/\/www\.instant-gaming\.com\/en\/\d+-", link["href"])):
             results.append(link["href"])
     return results
 
@@ -228,7 +228,12 @@ def search_keyword_handler(message):
     keyword = message.text
     logger.info(f"Searching keyword {keyword} from chat_id {message.chat.id}")
     results = search_keyword(keyword)[:3]
+    logger.info(
+        f"Found {len(results)} results with keyword {keyword} from chat_id {message.chat.id}")
+    if(not results):
+        bot.reply_to(message, f"No results found for keyword {keyword}")
     for url in results:
+        logger.debug(f"Get url price {url}, chat_id: {message.chat.id}")
         current_price = get_price_from_url(url)
         reply = f"""
 🎮 *URL*: {url}
