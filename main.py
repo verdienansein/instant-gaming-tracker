@@ -8,10 +8,10 @@ from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 
 import telebot
+from threading import Thread
 from db_helper import DBHelper
 
 TOKEN = os.getenv('TOKEN')
-CHAT_IDS = os.getenv('CHAT_IDS').split(",")
 LOG_LEVEL = os.getenv('LOG_LEVEL')
 SLEEP_INTERVAL = int(os.getenv('SLEEP_INTERVAL'))
 TELEGRAM_API_URL = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
@@ -67,14 +67,15 @@ def get_price(message):
     price = re.findall(regex, message)      
     return price[0]
 
-@bot.message_handler(regexp="add target .+,.+")
-def echo_all(message):
+@bot.message_handler(commands=["add"])
+def add_target(message):
     url = get_url(message.text)[0]
     price = get_price(message.text)
     db.add_target(url, float(price), message.chat.id)
+    bot.reply_to(message, f"Added target with URL {url} and price {price}")
 
-@bot.message_handler(regexp="list.*target.*")
-def echo_all(message):
+@bot.message_handler(commands=["list"])
+def list_targets(message):
     targets = db.get_targets(message.chat.id)
     for target in targets:
         reply = f'Url: {target[0]}, Target price: {target[1]}'
@@ -86,6 +87,7 @@ if __name__ == '__main__':
     db = DBHelper()
     db.setup()
 
-    main(logger, db)
+    thread = Thread(target = main, args = (logger, db))
+    thread.start()
 
     bot.infinity_polling()
