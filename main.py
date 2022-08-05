@@ -44,9 +44,9 @@ def create_targets_list():
     return targets
 
 def main(logger, db):
-    targets = db.get_all_targets()
     logger.info(f'Target list loaded: {targets}')
     while True:
+        targets = db.get_all_targets()
         for target in targets:
             target_url = target[0]
             target_price = target[1]
