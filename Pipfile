@@ -8,6 +8,7 @@ requests = "*"
 python-dotenv = "*"
 beautifulsoup4 = "*"
 pytelegrambotapi = "*"
+psycopg2-binary = "*"
 
 [dev-packages]
 
