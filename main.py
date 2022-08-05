@@ -238,7 +238,7 @@ def search_keyword_handler(message):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(format='%(process)d-%(levelname)s-%(message)s',
+    logging.basicConfig(format='%(asctime)s-%(threadName)s-%(levelname)s-%(message)s',
                         stream=sys.stdout, level=LOG_LEVEL)
     logger = logging.getLogger()
 
