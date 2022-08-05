@@ -1,1 +1,1 @@
-bot: python3 main.py
+bot: pipenv run python3 main.py
