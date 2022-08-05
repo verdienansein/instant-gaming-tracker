@@ -196,8 +196,13 @@ def search_targets(message):
 def search_keyword_handler(message):
     keyword = message.text
     results = search_keyword(keyword)[:3]
-    for result in results:
-        bot.reply_to(message, result)
+    for url in results:
+        current_price = get_price_from_url(url)
+        reply = f"""
+🎮 *URL*: {url}
+💶 *Current price*: {current_price}
+        """
+        bot.reply_to(message, reply)
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(process)d-%(levelname)s-%(message)s', stream = sys.stdout, level = LOG_LEVEL)
