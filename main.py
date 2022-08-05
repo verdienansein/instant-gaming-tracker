@@ -15,7 +15,8 @@ TELEGRAM_API_URL = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
 def get_price_from_url(url):
     html_text = requests.get(url).text
     soup = BeautifulSoup(html_text, "html.parser")
-    return float(soup.find_all("div", class_="total")[-1].get_text()[:-1])
+    price = soup.find_all("meta", itemprop="price")
+    return float(price[0]["data-price-eur"])
 
 def send_to_chat(price, url, chat_id):
     data = {
