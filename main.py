@@ -1,14 +1,14 @@
+import logging
 import os
-import requests
-import time
 import re
 import sys
-import logging
-from dotenv import load_dotenv
+import time
+from threading import Thread
+
+import requests
+import telebot
 from bs4 import BeautifulSoup
 
-import telebot
-from threading import Thread
 from db_helper import DBHelper, PostgreDBHelper
 
 TOKEN = os.getenv('TOKEN')
@@ -28,15 +28,18 @@ def get_price_from_url(url):
     price = soup.find_all("meta", itemprop="price")
     return float(price[0]["data-price-eur"])
 
+
 def search_keyword(keyword):
-    html_text = requests.get(f"https://www.instant-gaming.com/en/search/?q={keyword}").text
+    search_url = f"https://www.instant-gaming.com/en/search/?q={keyword}"
+    html_text = requests.get(search_url).text
     soup = BeautifulSoup(html_text, "html.parser")
     links = soup.find_all("a", href=True)
     results = []
     for link in links:
-      if bool(re.search("https:\/\/www\.instant-gaming\.com/en/\d+-", link["href"])):
-        results.append(link["href"])
+        if bool(re.search("https:\/\/www\.instant-gaming\.com/en/\d+-", link["href"])):
+            results.append(link["href"])
     return results
+
 
 def send_to_chat(price, url, chat_id):
     data = {
@@ -46,13 +49,6 @@ def send_to_chat(price, url, chat_id):
     }
     requests.post(TELEGRAM_API_URL, data=data)
 
-def create_targets_list():
-    targets = []
-    for key, value in os.environ.items():
-      if key.startswith('TARGET_'):
-        target = { 'url': value.split(',')[0], 'price_target': float(value.split(',')[1])}
-        targets.append(target)
-    return targets
 
 def main(logger, db):
     while True:
@@ -66,12 +62,14 @@ def main(logger, db):
                 price = get_price_from_url(target_url)
                 logger.debug(f'Price {price} for url {target_url}')
                 if price <= target_price:
-                    logger.info(f'Hit target price {target_price} for url {target_url}')
+                    logger.info(
+                        f'Hit target price {target_price} for url {target_url}')
                     send_to_chat(price, target_url, target_chat)
                     logger.debug(f'Sent message to {target_chat}')
             time.sleep(SLEEP_INTERVAL)
         except Exception as e:
-          logger.error(e)
+            logger.error(e)
+
 
 def parse_url(message):
     regex = r"(https:\/\/www\.instant-gaming\.com/.+)"
@@ -79,6 +77,7 @@ def parse_url(message):
     if len(url) < 1:
         return False
     return url[0]
+
 
 @bot.message_handler(commands=["help", "start"])
 def add_target(message):
@@ -92,6 +91,7 @@ def add_target(message):
 /list - List all the tracked targets.
     """)
 
+
 @bot.message_handler(commands=["add"])
 def add_target(message):
     bot.reply_to(message, f"""
@@ -99,6 +99,7 @@ def add_target(message):
 what URL do you want to track?
     """)
     bot.register_next_step_handler(message=message, callback=get_url_handler)
+
 
 def get_url_handler(message):
     url = parse_url(message.text)
@@ -113,6 +114,7 @@ what target price you want to set? (for example: 35)
     """)
     bot.register_next_step_handler(message=message, callback=get_price_handler)
 
+
 def get_price_handler(message):
     try:
         url = state[message.chat.id]["url"]
@@ -125,13 +127,16 @@ def get_price_handler(message):
         logger.error(e)
         bot.reply_to(message, f"Sorry, something went wrong.")
 
+
 @bot.message_handler(commands=["update"])
 def update_target(message):
     bot.reply_to(message, f"""
     Hi, 
 what URL do you want to update?
     """)
-    bot.register_next_step_handler(message=message, callback=get_url_for_update_handler)
+    bot.register_next_step_handler(
+        message=message, callback=get_url_for_update_handler)
+
 
 def get_url_for_update_handler(message):
     url = parse_url(message.text)
@@ -144,19 +149,23 @@ def get_url_for_update_handler(message):
     Hi, 
 what target price you want to set? (for example: 35)
     """)
-    bot.register_next_step_handler(message=message, callback=get_price_for_update_handler)
+    bot.register_next_step_handler(
+        message=message, callback=get_price_for_update_handler)
+
 
 def get_price_for_update_handler(message):
     try:
         url = state[message.chat.id]["url"]
         price = float(message.text)
         db.update_target_price(url, price, message.chat.id)
-        bot.reply_to(message, f"Updated target with URL {url} and price {price}")
+        bot.reply_to(
+            message, f"Updated target with URL {url} and price {price}")
     except ValueError:
         bot.reply_to(message, f"Target {url} already exists.")
     except Exception as e:
         logger.error(e)
         bot.reply_to(message, f"Sorry, something went wrong.")
+
 
 @bot.message_handler(commands=["delete"])
 def delete_target(message):
@@ -164,7 +173,9 @@ def delete_target(message):
     Hi, 
 what URL do you want to delete?
     """)
-    bot.register_next_step_handler(message=message, callback=get_url_for_delete_handler)
+    bot.register_next_step_handler(
+        message=message, callback=get_url_for_delete_handler)
+
 
 def get_url_for_delete_handler(message):
     url = parse_url(message.text)
@@ -173,6 +184,7 @@ def get_url_for_delete_handler(message):
         return
     db.delete_target(url, message.chat.id)
     bot.reply_to(message, f"Target {url} deleted!")
+
 
 @bot.message_handler(commands=["list"])
 def list_targets(message):
@@ -188,10 +200,13 @@ def list_targets(message):
         """
         bot.reply_to(message, reply, parse_mode="Markdown")
 
+
 @bot.message_handler(commands=["search"])
 def search_targets(message):
     bot.reply_to(message, "Insert a keyword to search: ")
-    bot.register_next_step_handler(message=message, callback=search_keyword_handler)
+    bot.register_next_step_handler(
+        message=message, callback=search_keyword_handler)
+
 
 def search_keyword_handler(message):
     keyword = message.text
@@ -204,8 +219,10 @@ def search_keyword_handler(message):
         """
         bot.reply_to(message, reply, parse_mode="Markdown")
 
+
 if __name__ == '__main__':
-    logging.basicConfig(format='%(process)d-%(levelname)s-%(message)s', stream = sys.stdout, level = LOG_LEVEL)
+    logging.basicConfig(format='%(process)d-%(levelname)s-%(message)s',
+                        stream=sys.stdout, level=LOG_LEVEL)
     logger = logging.getLogger()
 
     if DB_TYPE == 'sqlite':
@@ -215,7 +232,7 @@ if __name__ == '__main__':
 
     db.setup()
 
-    thread = Thread(target = main, args = (logger, db))
+    thread = Thread(target=main, args=(logger, db))
     thread.start()
 
     bot.infinity_polling()
