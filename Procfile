@@ -1,1 +1,1 @@
-bot: pipenv install && run python3 main.py
+bot: pipenv install && pipenv run python3 main.py
