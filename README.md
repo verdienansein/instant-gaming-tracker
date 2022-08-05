@@ -9,6 +9,8 @@ Bot username on Telegram is: `@instantgaming_tracker_bot`.
 The following environment variables are needed to start the bot:
 * `TOKEN`: Telegram bot token
 * `SLEEP_INTERVAL`: the interval used by the bot to poll Instant Gaming
+* `DB_TYPE`: the database type to use. Value can be either `postgresql` or `sqlite`
+* `DATABASE_URL`: postgresql database connection string
 * `LOG_LEVEL`
 
 ### Bot commands
