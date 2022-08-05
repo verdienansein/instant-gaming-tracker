@@ -202,7 +202,7 @@ def search_keyword_handler(message):
 🎮 *URL*: {url}
 💶 *Current price*: {current_price}
         """
-        bot.reply_to(message, reply)
+        bot.reply_to(message, reply, parse_mode="Markdown")
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(process)d-%(levelname)s-%(message)s', stream = sys.stdout, level = LOG_LEVEL)
