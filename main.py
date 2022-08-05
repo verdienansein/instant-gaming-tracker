@@ -178,8 +178,15 @@ def get_url_for_delete_handler(message):
 def list_targets(message):
     targets = db.get_targets(message.chat.id)
     for target in targets:
-        reply = f'Url: {target[0]}, Target price: {target[1]}'
-        bot.reply_to(message, reply)
+        url = target[0]
+        target_price = target[1]
+        current_price = get_price_from_url(url)
+        reply = f"""
+*URL*: {url}
+*Target price*: {target_price}
+*Current price*: {current_price}
+        """
+        bot.reply_to(message, reply, parse_mode=telebot.ParseMode.MARKDOWN)
 
 @bot.message_handler(commands=["search"])
 def search_targets(message):
