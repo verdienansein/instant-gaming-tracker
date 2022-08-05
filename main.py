@@ -4,17 +4,18 @@ import time
 import re
 import sys
 import logging
-import sqlite3
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 
 import telebot
 from threading import Thread
-from db_helper import DBHelper
+from db_helper import DBHelper, PostgreDBHelper
 
 TOKEN = os.getenv('TOKEN')
 LOG_LEVEL = os.getenv('LOG_LEVEL')
 SLEEP_INTERVAL = int(os.getenv('SLEEP_INTERVAL'))
+DB_TYPE = os.getenv('DB_TYPE')
+HEROKU_POSTGRESQL = os.getenv('HEROKU_POSTGRESQL')
 TELEGRAM_API_URL = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
 
 bot = telebot.TeleBot(TOKEN)
@@ -91,7 +92,7 @@ def add_target(message):
         price = parse_message(message.text)[1]
         db.add_target(url, float(price), message.chat.id)
         bot.reply_to(message, f"Added target with URL {url} and price {price}")
-    except sqlite3.IntegrityError:
+    except ValueError:
         bot.reply_to(message, f"Target {url} already exists.")
 
 
@@ -122,7 +123,12 @@ def list_targets(message):
 if __name__ == '__main__':
     logging.basicConfig(format='%(process)d-%(levelname)s-%(message)s', stream = sys.stdout, level = LOG_LEVEL)
     logger = logging.getLogger()
-    db = DBHelper()
+
+    if DB_TYPE == 'sqlite':
+        db = DBHelper()
+    elif DB_TYPE == 'postgresql':
+        db = PostgreDBHelper(conn_string=HEROKU_POSTGRESQL)
+
     db.setup()
 
     thread = Thread(target = main, args = (logger, db))
