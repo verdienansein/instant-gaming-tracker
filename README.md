@@ -2,6 +2,8 @@
 
 This Telegram Bot monitors Instant Gaming items prices and notifies you on Telegram if the price drops.
 
+Bot username on Telegram is: `@instantgaming_tracker_bot`.
+
 ## Usage
 
 The following environment variables are needed to start the bot:
