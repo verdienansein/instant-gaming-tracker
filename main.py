@@ -51,8 +51,10 @@ def send_to_chat(price, url, chat_id):
 
 
 def main(logger, db):
+    logger.info("Started pooling thread.")
     while True:
         try:
+            logger.info(f"Fetching targets")
             targets = db.get_all_targets()
             logger.debug(f'Target list loaded: {targets}')
             for target in targets:
@@ -81,8 +83,9 @@ def parse_url(message):
 
 @bot.message_handler(commands=["help", "start"])
 def add_target(message):
+    logger.info(f"Help Request from chat_id {message.chat.id}")
     bot.reply_to(message, f"""
-    /start - Start the bot.
+/start - Start the bot.
 /help - Help message.
 /search - Search for URLs to track by keyword
 /add - Add a new target URL to track with a price.
@@ -94,8 +97,9 @@ def add_target(message):
 
 @bot.message_handler(commands=["add"])
 def add_target(message):
+    logger.info(f"Add Request from chat_id {message.chat.id}")
     bot.reply_to(message, f"""
-    Hi, 
+Hi, 
 what URL do you want to track?
     """)
     bot.register_next_step_handler(message=message, callback=get_url_handler)
@@ -103,13 +107,14 @@ what URL do you want to track?
 
 def get_url_handler(message):
     url = parse_url(message.text)
+    logger.debug(f"Got url {url}, chat_id: {message.chat.id}")
     if not url:
         bot.reply_to(message, f"URL must be a proper Instant Gaming URL.")
         return
     state[message.chat.id] = {}
     state[message.chat.id]["url"] = url
     bot.reply_to(message, f"""
-    Hi, 
+Hi, 
 what target price you want to set? (for example: 35)
     """)
     bot.register_next_step_handler(message=message, callback=get_price_handler)
@@ -119,6 +124,8 @@ def get_price_handler(message):
     try:
         url = state[message.chat.id]["url"]
         price = float(message.text)
+        logger.info(
+            f"Adding target {url} - price {price} from chat_id {message.chat.id}")
         db.add_target(url, price, message.chat.id)
         bot.reply_to(message, f"Added target with URL {url} and price {price}")
     except ValueError:
@@ -130,8 +137,9 @@ def get_price_handler(message):
 
 @bot.message_handler(commands=["update"])
 def update_target(message):
+    logger.info(f"Update Request from chat_id {message.chat.id}")
     bot.reply_to(message, f"""
-    Hi, 
+Hi, 
 what URL do you want to update?
     """)
     bot.register_next_step_handler(
@@ -146,7 +154,7 @@ def get_url_for_update_handler(message):
     state[message.chat.id] = {}
     state[message.chat.id]["url"] = url
     bot.reply_to(message, f"""
-    Hi, 
+Hi, 
 what target price you want to set? (for example: 35)
     """)
     bot.register_next_step_handler(
@@ -169,8 +177,9 @@ def get_price_for_update_handler(message):
 
 @bot.message_handler(commands=["delete"])
 def delete_target(message):
+    logger.info(f"Delete Request from chat_id {message.chat.id}")
     bot.reply_to(message, f"""
-    Hi, 
+Hi, 
 what URL do you want to delete?
     """)
     bot.register_next_step_handler(
@@ -188,6 +197,7 @@ def get_url_for_delete_handler(message):
 
 @bot.message_handler(commands=["list"])
 def list_targets(message):
+    logger.info(f"List Request from chat_id {message.chat.id}")
     targets = db.get_targets(message.chat.id)
     for target in targets:
         url = target[0]
@@ -203,6 +213,7 @@ def list_targets(message):
 
 @bot.message_handler(commands=["search"])
 def search_targets(message):
+    logger.info(f"Search Request from chat_id {message.chat.id}")
     bot.reply_to(message, "Insert a keyword to search: ")
     bot.register_next_step_handler(
         message=message, callback=search_keyword_handler)
